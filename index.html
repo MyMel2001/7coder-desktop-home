@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7Coder Desktop - AI-First PWA IDE with Local File System Access</title>
+  <meta name="description" content="A self-hosted, E2E encrypted alternative to VSCode. Edit local folders directly from your browser, search Open VSX extensions, and chat with local AI agents.">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Premium CSS Variables & Reset */
+    :root {
+      --bg-dark: #07070a;
+      --bg-card: rgba(13, 13, 23, 0.65);
+      --bg-card-hover: rgba(20, 20, 35, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(99, 102, 241, 0.3);
+      --text-main: #94a3b8;
+      --text-light: #f8fafc;
+      --primary: #3b82f6;
+      --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      --accent-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+      --success: #10b981;
+      --success-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'Fira Code', 'JetBrains Mono', monospace;
+      --editor-bg: #11111b;
+      --editor-sidebar: #181825;
+      --editor-tab-active: #1e1e2e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* Ambient Background Glows */
+    .glow-circle {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .glow-1 {
+      top: 10%;
+      left: 10%;
+      background: #3b82f6;
+    }
+
+    .glow-2 {
+      top: 40%;
+      right: 5%;
+      background: #8b5cf6;
+    }
+
+    .glow-3 {
+      bottom: 10%;
+      left: 20%;
+      background: #ec4899;
+    }
+
+    /* Typography & Utilities */
+    h1, h2, h3, h4 {
+      color: var(--text-light);
+      font-weight: 800;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s ease;
+    }
+
+    .gradient-text {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .gradient-text-accent {
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-light);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Navigation Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background-color: rgba(7, 7, 10, 0.7);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--primary-gradient);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-link {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .nav-link:hover {
+      color: var(--text-light);
+    }
+
+    /* Hero Section */
+    section.hero-section {
+      position: relative;
+      padding: 160px 24px 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 48px;
+      align-items: center;
+      min-height: calc(100vh - 80px);
+    }
+
+    .hero-info {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .badge-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-title {
+      font-size: 3.8rem;
+      line-height: 1.1;
+      letter-spacing: -2px;
+    }
+
+    .hero-desc {
+      font-size: 1.2rem;
+      color: var(--text-main);
+      max-width: 540px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .img-wrapper {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.15);
+      transition: transform 0.5s ease;
+    }
+
+    .img-wrapper:hover {
+      transform: translateY(-5px) scale(1.01);
+    }
+
+    .hero-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Terminal Emulator */
+    .terminal-box {
+      background: #0f141c;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      margin-top: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .terminal-header {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .term-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .td-red { background-color: #ef4444; }
+    .td-yellow { background-color: #f59e0b; }
+    .td-green { background-color: #10b981; }
+
+    .terminal-body {
+      color: #38bdf8;
+    }
+    .term-cmd { color: #f8fafc; }
+    .term-comment { color: #64748b; }
+
+    /* Interactive Editor Simulator */
+    .simulator-container {
+      max-width: 1200px;
+      margin: 80px auto;
+      padding: 0 24px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      letter-spacing: -1px;
+    }
+
+    .section-subtitle {
+      font-size: 1.1rem;
+      max-width: 600px;
+    }
+
+    .editor-sim {
+      background-color: var(--editor-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 520px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 50px rgba(99, 102, 241, 0.1);
+    }
+
+    .sim-header {
+      background-color: var(--editor-sidebar);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .sim-header-title {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+    }
+
+    .sim-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sim-activity-bar {
+      width: 48px;
+      background-color: #111116;
+      border-right: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 16px;
+      gap: 20px;
+    }
+
+    .sim-act-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #585b70;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      background: transparent;
+    }
+
+    .sim-act-btn.active {
+      color: #89b4fa;
+      background-color: rgba(137, 180, 250, 0.1);
+    }
+
+    .sim-act-btn:hover:not(.active) {
+      color: #cdd6f4;
+    }
+
+    .sim-sidebar {
+      width: 200px;
+      background-color: var(--editor-sidebar);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+    }
+
+    .sidebar-title {
+      padding: 10px 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      color: #6c7086;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .file-item {
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #a6adc8;
+      transition: background-color 0.2s ease;
+    }
+
+    .file-item:hover {
+      background-color: rgba(255, 255, 255, 0.02);
+      color: #cdd6f4;
+    }
+
+    .file-item.active {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .sim-editor-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--editor-bg);
+    }
+
+    .sim-tabs {
+      height: 36px;
+      background-color: var(--editor-sidebar);
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .sim-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      font-size: 0.8rem;
+      border-right: 1px solid rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      color: #7f849c;
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .sim-tab.active {
+      background-color: var(--editor-bg);
+      color: #cdd6f4;
+      border-top: 2px solid #89b4fa;
+      font-weight: 500;
+    }
+
+    .sim-code {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #cdd6f4;
+      line-height: 1.5;
+    }
+
+    .sim-code pre {
+      white-space: pre-wrap;
+    }
+
+    /* Simulation Highlight Colors */
+    .keyword { color: #cba6f7; }
+    .string { color: #a6e3a1; }
+    .comment { color: #585b70; font-style: italic; }
+    .function { color: #89b4fa; }
+    .number { color: #fab387; }
+    .tag { color: #f38ba8; }
+
+    .sim-ai-panel {
+      width: 280px;
+      background-color: var(--editor-sidebar);
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ai-chat-history {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+
+    .chat-bubble {
+      padding: 10px 12px;
+      border-radius: 10px;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+
+    .bubble-user {
+      align-self: flex-end;
+      background-color: rgba(137, 180, 250, 0.15);
+      color: #89b4fa;
+      border: 1px solid rgba(137, 180, 250, 0.25);
+    }
+
+    .bubble-ai {
+      align-self: flex-start;
+      background-color: rgba(255, 255, 255, 0.03);
+      color: #cdd6f4;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .ai-controls {
+      padding: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      gap: 8px;
+    }
+
+    .ai-input {
+      flex: 1;
+      background-color: var(--editor-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #ffffff;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
+    .ai-btn {
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .sim-desc-box {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* Features Grid */
+    .features-section {
+      max-width: 1200px;
+      margin: 100px auto;
+      padding: 0 24px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .feature-card:hover {
+      background-color: var(--bg-card-hover);
+      border-color: rgba(99, 102, 241, 0.25);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.05);
+      transform: translateY(-4px);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-light);
+      position: relative;
+      z-index: 2;
+    }
+
+    .feature-card:hover .feature-icon-wrapper {
+      background: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      border-color: transparent;
+    }
+
+    .feature-card h3 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      position: relative;
+      z-index: 2;
+    }
+
+    .feature-card p {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      position: relative;
+      z-index: 2;
+      line-height: 1.6;
+    }
+
+    /* Security Blueprint Diagram Section */
+    .security-section {
+      background: radial-gradient(circle at 50% 50%, rgba(13, 13, 23, 0.9) 0%, var(--bg-dark) 80%);
+      padding: 100px 24px;
+    }
+
+    .security-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .sec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--success);
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .security-info h2 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    .security-info p {
+      margin-bottom: 20px;
+      font-size: 1.05rem;
+    }
+
+    .sec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sec-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.95rem;
+    }
+
+    .sec-list-icon {
+      color: var(--success);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    /* SVG Cryptography Flow */
+    .crypto-diagram-wrapper {
+      background: rgba(10, 10, 15, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .crypto-svg {
+      width: 100%;
+      height: auto;
+    }
+
+    /* Architecture / Flow Section */
+    .workflow-section {
+      max-width: 1200px;
+      margin: 100px auto;
+      padding: 0 24px;
+    }
+
+    .workflow-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+      position: relative;
+    }
+
+    .step-number {
+      font-size: 3rem;
+      font-weight: 900;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+
+    .step-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+    }
+
+    .step-card p {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 60px 24px;
+      background: #040407;
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .footer-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-link {
+      font-size: 0.9rem;
+    }
+
+    .footer-link:hover {
+      color: var(--text-light);
+    }
+
+    .footer-license {
+      font-size: 0.8rem;
+      color: #475569;
+      margin-top: 8px;
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 1024px) {
+      section.hero-section {
+        grid-template-columns: 1fr;
+        padding-top: 120px;
+        text-align: center;
+      }
+      .hero-desc {
+        margin: 0 auto;
+      }
+      .hero-actions {
+        justify-content: center;
+      }
+      .security-container {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+      .workflow-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2.8rem;
+      }
+      .nav-menu {
+        display: none; /* simple responsive fallback */
+      }
+      .editor-sim {
+        height: auto;
+        min-height: 480px;
+      }
+      .sim-sidebar, .sim-ai-panel {
+        display: none; /* simplify editor UI on mobile */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Ambience -->
+  <div class="glow-circle glow-1" aria-hidden="true"></div>
+  <div class="glow-circle glow-2" aria-hidden="true"></div>
+  <div class="glow-circle glow-3" aria-hidden="true"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="logo-container" id="nav-logo">
+        <div class="logo-icon">7</div>
+        <span>7Coder Desktop</span>
+      </a>
+      <nav class="nav-menu">
+        <a href="#features" class="nav-link" id="nav-link-features">Features</a>
+        <a href="#demo" class="nav-link" id="nav-link-demo">Interactive Demo</a>
+        <a href="#security" class="nav-link" id="nav-link-security">Security Blueprint</a>
+        <a href="https://git.nodemixaholic.com/mymel2001-holder/7Coder-Desktop" target="_blank" class="nav-link" id="nav-link-repo">Repository</a>
+        <a href="https://www.nodemixaholic.com/7coder-home" target="_blank" class="nav-link" id="nav-link-repo">7Coder CLI</a>
+
+      </nav>
+      <div>
+        <a href="http://localhost:5173" target="_blank" class="btn btn-secondary" style="padding: 8px 18px; font-size: 0.9rem;" id="nav-launch-btn">
+          Launch App
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section" id="hero">
+      <div class="hero-info">
+        <div class="badge-container">
+          <span class="badge" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--success);">SECURE E2E SYNC</span>
+        </div>
+        <h1 class="hero-title" id="main-heading">
+          A Developer's Workspace, <br>
+          <span class="gradient-text">Reimagined.</span>
+        </h1>
+        <p class="hero-desc">
+          7Coder Desktop is a self-hosted, E2E-encrypted alternative to VSCode that runs natively in your browser. Open local directories directly and work with persistent AI agents securely.
+        </p>
+        <div class="hero-actions">
+          <a href="http://localhost:5173" target="_blank" class="btn btn-primary" id="hero-cta-btn">Go to Editor on localhost (assumes installation)</a>
+          <a href="https://git.nodemixaholic.com/mymel2001-holder/7Coder-Desktop" target="_blank" class="btn btn-secondary" id="hero-repo-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            Git Repository
+          </a>
+          <a href="#demo" class="btn btn-secondary" id="hero-secondary-btn">See Demo</a>
+        </div>
+        
+        <!-- Embedded Terminal -->
+        <div class="terminal-box" id="hero-terminal">
+          <div class="terminal-header">
+            <span class="term-dot td-red"></span>
+            <span class="term-dot td-yellow"></span>
+            <span class="term-dot td-green"></span>
+          </div>
+          <div class="terminal-body">
+            <span class="term-comment"># Clone and fire up the hybrid server</span><br>
+            <span class="term-cmd">$</span> git clone https://github.com/mymel2001/7Coder-Desktop.git<br>
+            <span class="term-cmd">$</span> npm install && npm run dev<br>
+            <span class="term-comment"># Combo server running on localhost:5173 &amp; localhost:2469</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-visual">
+        <div class="img-wrapper">
+          <img src="coder_hero_mockup.png" alt="7Coder Interface Isometric Presentation Mockup" class="hero-img" id="hero-presentation-image">
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Features Grid -->
+    <section class="features-section" id="features">
+      <div class="section-header">
+        <span class="badge">CAPABILITIES</span>
+        <h2 class="section-title">Built for Modern Developers</h2>
+        <p class="section-subtitle">Combining the speed of browser applications with the power of native desktop configurations.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card" id="feat-fs">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+          </div>
+          <h3>Native File System Access</h3>
+          <p>Read and write directories directly on your local device. Uses the native Browser File System Access API with standard fallbacks for Safari/Firefox.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card" id="feat-ai">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <h3>AI Agentic Side-Panel</h3>
+          <p>Interact with your persistent workspace AI agent. Stream responses, execute code modifications directly on files, and sync keys for local Ollama/OpenRouter endpoints.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card" id="feat-crypto">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>E2E Encryption Sync</h3>
+          <p>Sync configuration, extensions, and workspace state safely. Zero-knowledge PBKDF2 key derivation and AES-GCM client-side encryption keep keys and data hidden from servers.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card" id="feat-vsx">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"/></svg>
+          </div>
+          <h3>Open VSX Extensions</h3>
+          <p>Integrates with the public Open VSX Marketplace directly. Search, install, and custom-manage extension definitions in a dedicated panel.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card" id="feat-monaco">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <h3>Monaco Code Editor</h3>
+          <p>Leverage standard code highlighting, layout maps, syntax errors, and smooth scrolling with `@monaco-editor/react` embedded inside the PWA.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card" id="feat-backend">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+          </div>
+          <h3>Unified Backend Combo</h3>
+          <p>A single hybrid Express + Vite server that manages client delivery, API configuration storage via Quick.DB, and concurrently active dev-environment routines.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Simulator Section -->
+    <section class="simulator-container" id="demo">
+      <div class="section-header">
+        <span class="badge" style="background: rgba(137, 180, 250, 0.1); border-color: rgba(137, 180, 250, 0.2); color: #89b4fa;">LIVE SIMULATOR</span>
+        <h2 class="section-title">Interact with the Harness</h2>
+        <p class="section-subtitle">Test out how the Explorer, AI Agent and E2E synchronization work together in the app dashboard.</p>
+      </div>
+
+      <div class="editor-sim" id="editor-simulator">
+        <!-- Editor Header -->
+        <div class="sim-header">
+          <div style="display: flex; gap: 6px;">
+            <span class="term-dot td-red" style="width:8px; height:8px;"></span>
+            <span class="term-dot td-yellow" style="width:8px; height:8px;"></span>
+            <span class="term-dot td-green" style="width:8px; height:8px;"></span>
+          </div>
+          <div class="sim-header-title">7coder-workspace/src/crypto.ts — 7Coder Desktop</div>
+          <div style="width: 24px;"></div>
+        </div>
+
+        <div class="sim-body">
+          <!-- Activity Bar -->
+          <div class="sim-activity-bar">
+            <button class="sim-act-btn active" id="act-btn-explorer" title="Explorer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M9 4v16"/></svg>
+            </button>
+            <button class="sim-act-btn" id="act-btn-extensions" title="Extensions">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </button>
+            <button class="sim-act-btn" id="act-btn-user" title="E2E Sync Settings" style="margin-top: auto; margin-bottom: 12px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </button>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="sim-sidebar" id="sim-sidebar-panel">
+            <div class="sidebar-title">Workspace Explorer</div>
+            <div class="file-item" data-file="index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #e67e22;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              index.html
+            </div>
+            <div class="file-item active" data-file="crypto.ts">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #3498db;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              crypto.ts
+            </div>
+            <div class="file-item" data-file="package.json">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f1c40f;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              package.json
+            </div>
+          </div>
+
+          <!-- Code Viewport -->
+          <div class="sim-editor-area">
+            <div class="sim-tabs">
+              <div class="sim-tab active" id="sim-tab-main">crypto.ts</div>
+              <div class="sim-tab" id="sim-tab-second" style="display:none;">index.html</div>
+            </div>
+            <div class="sim-code">
+              <pre id="code-content-block">
+<span class="keyword">import</span> { encryptData, decryptData } <span class="keyword">from</span> <span class="string">'./lib/crypto'</span>;
+
+<span class="comment">// 7Coder Desktop derives AES-GCM keys locally from master passwords</span>
+<span class="keyword">export async function</span> <span class="function">syncSettings</span>(userId, settingsObject, password) {
+  <span class="keyword">try</span> {
+    <span class="comment">// 1. Encrypt settings with client password</span>
+    <span class="keyword">const</span> payload = <span class="keyword">await</span> <span class="function">encryptData</span>(settingsObject, password);
+    
+    <span class="comment">// 2. Post encrypted payload to Quick.DB backend</span>
+    <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'http://localhost:2469/api/sync'</span>, {
+      method: <span class="string">'POST'</span>,
+      headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+      body: JSON.stringify({ userId, data: payload })
+    });
+    
+    console.log(<span class="string">'Settings synced securely!'</span>);
+  } <span class="keyword">catch</span> (err) {
+    console.error(<span class="string">'Sync failure:'</span>, err);
+  }
+}</pre>
+            </div>
+          </div>
+
+          <!-- AI Chat panel -->
+          <div class="sim-ai-panel">
+            <div class="sidebar-title" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between;">
+              <span>AI Copilot</span>
+              <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 2px 6px; border-radius: 4px;">Active</span>
+            </div>
+            <div class="ai-chat-history" id="sim-chat-history">
+              <div class="chat-bubble bubble-ai">
+                Hi! I'm your local AI agent. I can read, analyze and edit your local directories. Try asking me something!
+              </div>
+            </div>
+            <div class="ai-controls">
+              <input type="text" class="ai-input" id="sim-ai-input" placeholder="Type message to agent..." value="Explain local folder editing.">
+              <button class="ai-btn" id="sim-ai-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Blueprint Section -->
+    <section class="security-section" id="security">
+      <div class="security-container">
+        <div class="security-info">
+          <div class="sec-badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Zero-Knowledge Security Architecture
+          </div>
+          <h2>True Client-Side Encryption</h2>
+          <p>
+            Unlike other Web IDEs that compile, run, or store files on remote cloud infrastructure, 7Coder Desktop runs in a localized environment.
+          </p>
+          <ul class="sec-list">
+            <li class="sec-list-item">
+              <svg class="sec-list-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Local Encryption Keys</strong>: Derived using PBKDF2 with salt parameters. No keys or passwords ever leave your machine.</span>
+            </li>
+            <li class="sec-list-item">
+              <svg class="sec-list-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>AES-GCM-256 Bit Data</strong>: All synchronized settings, UI workspace preferences, and active extensions are packaged, encrypted locally, and stored as unreadable binary envelopes.</span>
+            </li>
+            <li class="sec-list-item">
+              <svg class="sec-list-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Quick.DB Storage Node</strong>: The backend Express database only operates on encrypted blobs, ensuring that even in case of data node breaches, your environment setup is secure.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="crypto-diagram-wrapper">
+          <!-- Custom Cryptography SVG Flow Chart -->
+          <svg class="crypto-svg" viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg">
+            <!-- Styles -->
+            <style>
+              .flow-node { fill: #1e1e2e; stroke: #3b82f6; stroke-width: 1.5; rx: 8; }
+              .flow-node-sec { fill: #111116; stroke: #10b981; stroke-width: 1.5; rx: 8; }
+              .flow-node-db { fill: #0f0f15; stroke: #f59e0b; stroke-width: 1.5; rx: 8; }
+              .flow-text { fill: #cdd6f4; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; text-anchor: middle; }
+              .flow-text-sub { fill: #94a3b8; font-family: 'Outfit', sans-serif; font-size: 9px; text-anchor: middle; }
+              .flow-arrow { stroke: #475569; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+              .flow-arrow-sec { stroke: #10b981; stroke-width: 1.5; fill: none; marker-end: url(#arrow-green); }
+            </style>
+            
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
+              </marker>
+              <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+              </marker>
+            </defs>
+            
+            <!-- Nodes -->
+            <!-- Client Layer -->
+            <rect x="20" y="20" width="130" height="50" class="flow-node" />
+            <text x="85" y="42" class="flow-text">Plaintext Settings</text>
+            <text x="85" y="56" class="flow-text-sub">AI Settings, Extension IDs</text>
+
+            <rect x="20" y="110" width="130" height="50" class="flow-node" />
+            <text x="85" y="132" class="flow-text">Master Password</text>
+            <text x="85" y="146" class="flow-text-sub">Entered in Auth Dialog</text>
+
+            <circle cx="85" cy="235" r="28" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-width="1.5" />
+            <text x="85" y="233" class="flow-text" font-size="9px">PBKDF2</text>
+            <text x="85" y="245" class="flow-text-sub" font-size="8px">Key Derivation</text>
+            
+            <!-- Encryption Box -->
+            <rect x="230" y="65" width="120" height="120" class="flow-node-sec" stroke-dasharray="4" />
+            <text x="290" y="85" class="flow-text" fill="#10b981">Client Sandbox</text>
+            <rect x="245" y="105" width="90" height="40" fill="#059669" fill-opacity="0.2" stroke="#10b981" stroke-width="1" rx="4"/>
+            <text x="290" y="125" class="flow-text" font-size="10px">AES-GCM</text>
+            <text x="290" y="137" class="flow-text-sub" font-size="8px">256-bit Encryption</text>
+
+            <rect x="230" y="220" width="120" height="50" class="flow-node-sec" />
+            <text x="290" y="242" class="flow-text">Encrypted Blob</text>
+            <text x="290" y="256" class="flow-text-sub">Ciphertext + IV + Tag</text>
+
+            <!-- Server Node -->
+            <rect x="400" y="100" width="85" height="100" class="flow-node-db" />
+            <text x="442" y="130" class="flow-text" fill="#f59e0b">Quick.DB</text>
+            <text x="442" y="145" class="flow-text-sub">Local Express</text>
+            <text x="442" y="157" class="flow-text-sub">Storage Server</text>
+            <text x="442" y="175" class="flow-text" font-size="9px" fill="#ef4444">Zero Knowledge</text>
+
+            <!-- Connections -->
+            <path d="M 150 45 L 230 110" class="flow-arrow" />
+            <path d="M 85 160 L 85 207" class="flow-arrow" />
+            <path d="M 113 235 L 245 140" class="flow-arrow" />
+            <path d="M 290 185 L 290 220" class="flow-arrow-sec" />
+            <path d="M 350 245 L 442 200" class="flow-arrow-sec" />
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workflow Section -->
+    <section class="workflow-section" id="workflow">
+      <div class="section-header">
+        <span class="badge">DEVELOPER WORKFLOW</span>
+        <h2 class="section-title">How 7Coder Desktop Operates</h2>
+        <p class="section-subtitle">A straightforward workflow built on direct browser standards, privacy-centric design, and active AI.</p>
+      </div>
+
+      <div class="workflow-steps">
+        <div class="step-card" id="step-one">
+          <div class="step-number">01</div>
+          <h3>Launch &amp; Authorize</h3>
+          <p>Start the server on your device. Set a master sync password which securely encrypts your local preferences node right inside the browser container.</p>
+        </div>
+        <div class="step-card" id="step-two">
+          <div class="step-number">02</div>
+          <h3>Select Workspace</h3>
+          <p>Grant 7Coder permission to open a local workspace directory. The file explorer displays files instantaneously using browser folder APIs.</p>
+        </div>
+        <div class="step-card" id="step-three">
+          <div class="step-number">03</div>
+          <h3>Code &amp; Co-Pilot</h3>
+          <p>Write clean code with Monaco, search and fetch new extensions from Open VSX, and prompt the AI harness side-panel to apply modifications to your workspace files.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-info">
+        <a href="#" class="logo-container" style="font-size: 1.25rem; margin-bottom: 8px;">
+          <div class="logo-icon" style="width:26px; height:26px; font-size:1.1rem;">7</div>
+          <span>7CODER</span>
+        </a>
+        <p style="font-size: 0.9rem;">Browser-based desktop IDE alternative with local storage, E2E syncing, and AI co-piloting.</p>
+        <div class="footer-license">7Coder Desktop is distributed under the SPL-R5 License.</div>
+      </div>
+
+      <div class="footer-links">
+        <a href="#features" class="footer-link">Features</a>
+        <a href="#demo" class="footer-link">Demo</a>
+        <a href="#security" class="footer-link">Security Blueprint</a>
+        <a href="https://git.nodemixaholic.com/mymel2001-holder/7Coder-Desktop" target="_blank" class="footer-link" id="footer-repo-link">Repository</a>
+        <a href="http://localhost:5173" target="_blank" class="footer-link">App Interface</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Simulator Interactive Logic -->
+  <script>
+    // Simulator configuration
+    const aiBtn = document.getElementById('sim-ai-btn');
+    const aiInput = document.getElementById('sim-ai-input');
+    const chatHistory = document.getElementById('sim-chat-history');
+    const statusBox = document.getElementById('simulator-status-box');
+    const codeContentBlock = document.getElementById('code-content-block');
+    const fileItems = document.querySelectorAll('.file-item');
+    const tabMain = document.getElementById('sim-tab-main');
+
+    let currentFile = 'crypto.ts';
+    let simulationTriggered = false;
+
+    // File contents dictionary
+    const filesContents = {
+      'crypto.ts': `<span class="keyword">import</span> { encryptData, decryptData } <span class="keyword">from</span> <span class="string">'./lib/crypto'</span>;
+
+<span class="comment">// 7Coder derives AES-GCM keys locally from master passwords</span>
+<span class="keyword">export async function</span> <span class="function">syncSettings</span>(userId, settingsObject, password) {
+  <span class="keyword">try</span> {
+    <span class="comment">// 1. Encrypt settings with client password</span>
+    <span class="keyword">const</span> payload = <span class="keyword">await</span> <span class="function">encryptData</span>(settingsObject, password);
+    
+    <span class="comment">// 2. Post encrypted payload to Quick.DB backend</span>
+    <span class="keyword">await</span> <span class="function">fetch</span>(<span class="string">'http://localhost:2469/api/sync'</span>, {
+      method: <span class="string">'POST'</span>,
+      headers: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> },
+      body: JSON.stringify({ userId, data: payload })
+    });
+    
+    console.log(<span class="string">'Settings synced securely!'</span>);
+  } <span class="keyword">catch</span> (err) {
+    console.error(<span class="string">'Sync failure:'</span>, err);
+  }
+}`,
+      'index.html': `&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;<span class="string">7Coder Workspace App</span>&lt;/title&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="root"&gt;&lt;/div&gt;
+  &lt;script type="module" src="/src/main.tsx"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;`,
+      'package.json': `{
+  <span class="keyword">"name"</span>: <span class="string">"7coder-client"</span>,
+  <span class="keyword">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="keyword">"type"</span>: <span class="string">"module"</span>,
+  <span class="keyword">"dependencies"</span>: {
+    <span class="keyword">"react"</span>: <span class="string">"^18.3.1"</span>,
+    <span class="keyword">"react-dom"</span>: <span class="string">"^18.3.1"</span>,
+    <span class="keyword">"@monaco-editor/react"</span>: <span class="string">"^4.6.0"</span>,
+    <span class="keyword">"lucide-react"</span>: <span class="string">"^0.344.0"</span>
+  }
+}`
+    };
+
+    // Sidebar clicking simulation
+    fileItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const file = item.getAttribute('data-file');
+        
+        // Update active class in sidebar list
+        fileItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        // Update active tab title and editor code
+        tabMain.textContent = file;
+        currentFile = file;
+        codeContentBlock.innerHTML = filesContents[file];
+        
+        statusBox.innerHTML = \`📂 Loaded file <strong>\${file}</strong> into the Monaco simulation editor.\`;
+      });
+    });
+
+    // AI Harness simulator click trigger
+    aiBtn.addEventListener('click', () => {
+      const userPrompt = aiInput.value.trim();
+      if (!userPrompt || simulationTriggered) return;
+
+      simulationTriggered = true;
+      aiBtn.disabled = true;
+      aiInput.disabled = true;
+
+      // Add user bubble
+      appendChatBubble(userPrompt, 'user');
+      aiInput.value = '';
+
+      // Add thinking bubble
+      const thinkingId = appendChatBubble('Agent is analyzing file explorer workspace nodes...', 'ai');
+
+      // AI Response steps
+      setTimeout(() => {
+        updateChatBubble(thinkingId, '7Coder Desktop leverages the <strong>Web File System Access API</strong> to retrieve directory tokens natively. Let me demonstrate how files are written directly.');
+      }, 1500);
+
+      setTimeout(() => {
+        // Change file tabs to index.html to illustrate editing
+        const htmlFileItem = document.querySelector('[data-file="index.html"]');
+        if (htmlFileItem) htmlFileItem.click();
+
+        appendChatBubble('Injecting a viewport meta tag into <strong>index.html</strong> directly on your local drive...', 'ai');
+      }, 3500);
+
+      setTimeout(() => {
+        // Edit file content in the simulation editor
+        const updatedIndexContent = \`&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  <span class="comment">&lt;!-- AI Added viewport config for responsiveness --&gt;</span>
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;<span class="string">7Coder Workspace App</span>&lt;/title&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="root"&gt;&lt;/div&gt;
+  &lt;script type="module" src="/src/main.tsx"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;\`;
+        
+        filesContents['index.html'] = updatedIndexContent;
+        if (currentFile === 'index.html') {
+          codeContentBlock.innerHTML = updatedIndexContent;
+        }
+
+        appendChatBubble('✅ Local edit applied successfully! Check index.html lines 5-6.', 'ai');
+        
+        statusBox.innerHTML = '✨ <strong>Simulator Success!</strong> The AI Agent just applied changes to your local files entirely within the browser context.';
+        
+        // Reset controls
+        simulationTriggered = false;
+        aiBtn.disabled = false;
+        aiInput.disabled = false;
+        aiInput.placeholder = "Ask AI to code...";
+      }, 5500);
+    });
+
+    function appendChatBubble(text, sender) {
+      const bubble = document.createElement('div');
+      const uniqueId = 'bubble-' + Date.now();
+      bubble.id = uniqueId;
+      bubble.className = \`chat-msg chat-bubble bubble-\${sender}\`;
+      bubble.innerHTML = text;
+      chatHistory.appendChild(bubble);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      return uniqueId;
+    }
+
+    function updateChatBubble(id, text) {
+      const bubble = document.getElementById(id);
+      if (bubble) {
+        bubble.innerHTML = text;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      }
+    }
+  </script>
+</body>
+</html>
